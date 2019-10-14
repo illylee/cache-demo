@@ -1,6 +1,7 @@
 package com.example.cache.config.chaincache;
 
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 
@@ -8,6 +9,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class ChainedCacheManager implements CacheManager {
     private final List<CacheManager> cacheManagers;
     private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>();
@@ -21,6 +23,7 @@ public class ChainedCacheManager implements CacheManager {
 
     @Override
     public Cache getCache(String name) {
+        log.info("##name: {}", name);
         return cacheMap.computeIfAbsent(name, key -> new ChainedCache(getCaches(key)));
     }
 
@@ -31,7 +34,7 @@ public class ChainedCacheManager implements CacheManager {
     @Override
     public Collection<String> getCacheNames() {
         return cacheManagers.stream()
-                .flatMap(manager -> manager.getCacheNames().stream())
-                .collect(Collectors.toSet());
+                            .flatMap(manager -> manager.getCacheNames().stream())
+                            .collect(Collectors.toSet());
     }
 }

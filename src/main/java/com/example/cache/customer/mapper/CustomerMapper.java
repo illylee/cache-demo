@@ -1,6 +1,6 @@
-package com.example.cache.mapper;
+package com.example.cache.customer.mapper;
 
-import com.example.cache.domain.Customer;
+import com.example.cache.customer.domain.Customer;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

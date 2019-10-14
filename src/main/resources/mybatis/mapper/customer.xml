@@ -1,7 +1,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.cache.mapper.CustomerMapper">
+<mapper namespace="com.example.cache.customer.mapper.CustomerMapper">
 
-    <select id="selectCustomer" resultType="com.example.cache.domain.Customer" parameterType="long">
+    <select id="selectCustomer" resultType="com.example.cache.customer.domain.Customer" parameterType="long">
         SELECT /* id=selectCustomer */
             customer_id
             , email

@@ -1,23 +1,21 @@
-package com.example.cache.service;
+package com.example.cache.customer.service;
 
-import com.example.cache.domain.Customer;
-import com.example.cache.mapper.CustomerMapper;
+import com.example.cache.customer.domain.Customer;
+import com.example.cache.customer.mapper.CustomerMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@CacheConfig(cacheNames = "customer")
 public class CustomerServiceImpl implements CustomerService {
 
     @Autowired
     CustomerMapper customerMapper;
 
-    @Cacheable(key="#customerId")
+    @Cacheable(key = "'customer_id_' + #customerId", value = "customerIdCache")
     public Customer selectCustomer(Long customerId) {
         return customerMapper.selectCustomer(customerId);
     }
@@ -28,10 +26,9 @@ public class CustomerServiceImpl implements CustomerService {
      * @param customerId
      * @param info
      */
-    @CacheEvict(value = "customer", key="#customerId" )
+    @CacheEvict(key="'customer_id_' + #customerId", value = "customerIdCache")
     public void updateCustomer(Long customerId, String info) {
          customerMapper.updateCustomer(customerId, info);
     }
-
 
 }

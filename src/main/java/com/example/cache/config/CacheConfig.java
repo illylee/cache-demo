@@ -7,8 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
-import org.springframework.cache.jcache.JCacheCacheManager;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,19 +20,17 @@ import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
-import javax.cache.Caching;
-import javax.cache.spi.CachingProvider;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-
 @Slf4j
+@EnableCaching(proxyTargetClass = true)
 @Configuration
 public class CacheConfig extends CachingConfigurerSupport {
+
     @Value("${redis.host:localhost}")
     private String redisHost;
     @Value("${redis.port:6379}")
@@ -49,8 +47,8 @@ public class CacheConfig extends CachingConfigurerSupport {
 
         RedisCacheConfiguration defaultConfig =
                 RedisCacheConfiguration.defaultCacheConfig()
-                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
-                        .entryTtl(Duration.ofSeconds(20L));
+                                       .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                                       .entryTtl(Duration.ofSeconds(20L));
 
         builder.cacheDefaults(defaultConfig);
 
@@ -61,7 +59,7 @@ public class CacheConfig extends CachingConfigurerSupport {
     public CacheManager caffeineCacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         List<CaffeineCache> caches = Arrays.stream(CacheType.values())
-                .map(cache -> new CaffeineCache(cache.getCacheName(), Caffeine.newBuilder().recordStats()
+                .map(cache -> new CaffeineCache(cache.getName(), Caffeine.newBuilder().recordStats()
                                 .expireAfterWrite(cache.getExpiredAfterWrite(), TimeUnit.SECONDS)
                                 .maximumSize(cache.getMaximumSize())
                                 .build()
@@ -69,27 +67,18 @@ public class CacheConfig extends CachingConfigurerSupport {
                 )
                 .collect(Collectors.toList());
         cacheManager.setCaches(caches);
+
+        log.info("caffeineCacheManager: Local-Cache");
+        //return new LoggingCacheManager(cacheManager, "Local-Cache");
+
         return cacheManager;
 
     }
-
-
-//    @Bean
-//    public CacheManager jCacheCacheManager() {
-//        CachingProvider provider = Caching.getCachingProvider(jCacheProvider);
-//
-//        try {
-//            return new LoggingCacheManager(new JCacheCacheManager(provider.getCacheManager(jCacheConfig.getURI(), provider.getDefaultClassLoader())), "Local-Cache");
-//        } catch (IOException e) {
-//            throw new IllegalStateException("can't create URI with spring.cache.jcache.config");
-//        }
-//    }
 
     @Bean
     @Primary
     @Override
     public CacheManager cacheManager() {
-
         return new ChainedCacheManager(caffeineCacheManager(), redisCacheManager());
     }
 }

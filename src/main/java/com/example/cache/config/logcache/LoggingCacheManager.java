@@ -1,5 +1,6 @@
 package com.example.cache.config.logcache;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 
@@ -7,6 +8,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class LoggingCacheManager implements CacheManager {
 
     private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>();
@@ -16,6 +18,8 @@ public class LoggingCacheManager implements CacheManager {
     public LoggingCacheManager(CacheManager delegate, String managerName) {
         this.delegate = delegate;
         this.managerName = managerName;
+        log.info("delegate: {}", delegate);
+        log.info("managerName: {}", managerName);
     }
 
     @Override

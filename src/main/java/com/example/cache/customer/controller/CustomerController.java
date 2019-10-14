@@ -1,6 +1,6 @@
-package com.example.cache.controller;
+package com.example.cache.customer.controller;
 
-import com.example.cache.service.CustomerService;
+import com.example.cache.customer.service.CustomerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;

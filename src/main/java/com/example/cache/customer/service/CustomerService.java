@@ -1,6 +1,6 @@
-package com.example.cache.service;
+package com.example.cache.customer.service;
 
-import com.example.cache.domain.Customer;
+import com.example.cache.customer.domain.Customer;
 
 public interface CustomerService {
 
