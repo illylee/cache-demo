@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public enum CacheType {
 
-    CUSTOMER("customerIdCache", 5 * 60, 10000),
+    CUSTOMER("customerIdCache", 1 * 60, 10000),
     PRODUCT_DETAIL("productDetailCache", 5 * 60, 10000);
 
     CacheType(String name, int expiredAfterWrite, int maximumSize) {
@@ -13,7 +13,6 @@ public enum CacheType {
         this.expiredAfterWrite = expiredAfterWrite;
         this.maximumSize = maximumSize;
     }
-
     private String name;
     private int expiredAfterWrite;
     private int maximumSize;

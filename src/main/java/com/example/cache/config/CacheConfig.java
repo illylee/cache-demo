@@ -4,10 +4,11 @@ import com.example.cache.config.chaincache.ChainedCacheManager;
 import com.example.cache.config.logcache.LoggingCacheManager;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -27,14 +28,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
-@EnableCaching(proxyTargetClass = true)
+
 @Configuration
 public class CacheConfig extends CachingConfigurerSupport {
 
-    @Value("${redis.host:localhost}")
+    @Value("${cache.redis.host}")
     private String redisHost;
-    @Value("${redis.port:6379}")
+
+    @Value("${cache.redis.port}")
     private Integer redisPort;
+
+    @Value("${cache.redis.time-to-live}")
+    private Long redisTtlSecond;
+
+
 
     @Bean
     public JedisConnectionFactory jedisConnectionFactory() {
@@ -47,18 +54,19 @@ public class CacheConfig extends CachingConfigurerSupport {
 
         RedisCacheConfiguration defaultConfig =
                 RedisCacheConfiguration.defaultCacheConfig()
-                                       .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
-                                       .entryTtl(Duration.ofSeconds(20L));
+                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                        .entryTtl(Duration.ofSeconds(redisTtlSecond));
 
         builder.cacheDefaults(defaultConfig);
 
-        return new LoggingCacheManager(builder.build(), "Global-Cache");
+        return new LoggingCacheManager(builder.build(), "Global-Redis-Cache");
     }
 
     @Bean
     public CacheManager caffeineCacheManager() {
-        SimpleCacheManager cacheManager = new SimpleCacheManager();
-        List<CaffeineCache> caches = Arrays.stream(CacheType.values())
+        log.info("##caffeineCacheManager");
+        SimpleCacheManager caffeineCacheManager = new SimpleCacheManager();
+        List<Cache> caches = Arrays.stream(CacheType.values())
                 .map(cache -> new CaffeineCache(cache.getName(), Caffeine.newBuilder().recordStats()
                                 .expireAfterWrite(cache.getExpiredAfterWrite(), TimeUnit.SECONDS)
                                 .maximumSize(cache.getMaximumSize())
@@ -66,12 +74,10 @@ public class CacheConfig extends CachingConfigurerSupport {
                         )
                 )
                 .collect(Collectors.toList());
-        cacheManager.setCaches(caches);
+        caffeineCacheManager.setCaches(caches);
+        caffeineCacheManager.initializeCaches();
 
-        log.info("caffeineCacheManager: Local-Cache");
-        //return new LoggingCacheManager(cacheManager, "Local-Cache");
-
-        return cacheManager;
+        return new LoggingCacheManager(caffeineCacheManager, "Local-Caffeine-Cache");
 
     }
 

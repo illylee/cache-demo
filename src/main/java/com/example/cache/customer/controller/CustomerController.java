@@ -19,7 +19,10 @@ public class CustomerController {
 
     @RequestMapping(value = "", method = RequestMethod.GET)
     public void getCustomer(@RequestParam Long customerId) {
+        long start = System.currentTimeMillis();
         customerService.selectCustomer(customerId);
+        long end = System.currentTimeMillis();
+        log.info("수행시간: {}", end - start);
     }
 
     @RequestMapping(value = "/edit", method = RequestMethod.GET)

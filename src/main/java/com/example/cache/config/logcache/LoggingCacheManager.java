@@ -18,13 +18,12 @@ public class LoggingCacheManager implements CacheManager {
     public LoggingCacheManager(CacheManager delegate, String managerName) {
         this.delegate = delegate;
         this.managerName = managerName;
-        log.info("delegate: {}", delegate);
-        log.info("managerName: {}", managerName);
     }
 
     @Override
     public Cache getCache(String name) {
         return cacheMap.computeIfAbsent(name, key -> new LoggingCache(delegate.getCache(key), managerName));
+
     }
 
     @Override

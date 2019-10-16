@@ -1,5 +1,6 @@
 package com.example.cache.config.chaincache;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.support.SimpleValueWrapper;
 
@@ -7,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+@Slf4j
 public class ChainedCache implements Cache {
 
     private final List<Cache> caches;
@@ -30,7 +32,6 @@ public class ChainedCache implements Cache {
 
     @Override
     public ValueWrapper get(Object key) {
-
         for (int i = first; i < size; i++) {
 
             ValueWrapper valueWrapper = caches.get(i).get(key);
@@ -76,6 +77,7 @@ public class ChainedCache implements Cache {
     }
 
     private void singleCachePut(Cache cache, Object key, Object value) {
+        log.info("singleCachePut: cache: {}", cache);
         cache.put(key, value);
     }
 
