@@ -37,10 +37,7 @@ public class CustomerServiceImpl implements CustomerService {
     //sync: 캐시 구현체가 Thread safe 하지 않는 경우, 자체적으로 캐시에 동기화를 거는 속성.
     @Cacheable(key = "'customer_id_' + #customerId", value = "customerIdCache")
     public Customer selectCustomer(Long customerId) {
-
         return customerMapper.selectCustomer(customerId);
-
-
     }
 
 

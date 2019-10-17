@@ -4,8 +4,8 @@ import com.example.cache.config.chaincache.ChainedCacheManager;
 import com.example.cache.config.logcache.LoggingCacheManager;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
@@ -16,11 +16,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisPassword;
+import org.springframework.data.redis.connection.RedisSentinelConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
+import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -32,34 +34,57 @@ import java.util.stream.Collectors;
 @Configuration
 public class CacheConfig extends CachingConfigurerSupport {
 
-    @Value("${cache.redis.host}")
-    private String redisHost;
-
-    @Value("${cache.redis.port}")
-    private Integer redisPort;
-
     @Value("${cache.redis.time-to-live}")
     private Long redisTtlSecond;
 
-
+    @Inject
+    private RedisProperties redisProperties;
 
     @Bean
-    public JedisConnectionFactory jedisConnectionFactory() {
-        return new JedisConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
+    public LettuceConnectionFactory redisConnectionFactory() {
+        //sentinel 구성
+        RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration()
+                .master(redisProperties.getSentinel().getMaster());
+        redisProperties.getSentinel().getNodes().forEach(s -> sentinelConfig.sentinel(s, Integer.valueOf(redisProperties.getPort())));
+        sentinelConfig.setPassword(RedisPassword.of(redisProperties.getPassword()));
+
+        //sentinelConfig.sentinel("127.0.0.1",  Integer.valueOf(26379));
+        //sentinelConfig.setPassword(RedisPassword.of("password"));
+
+        return new LettuceConnectionFactory(sentinelConfig);
     }
+
+
+//    @Bean
+//    public JedisConnectionFactory jedisConnectionFactory() {
+//        return new JedisConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
+//    }
 
     @Bean
     public CacheManager redisCacheManager() {
-        RedisCacheManager.RedisCacheManagerBuilder builder = RedisCacheManager.RedisCacheManagerBuilder.fromConnectionFactory(jedisConnectionFactory());
 
-        RedisCacheConfiguration defaultConfig =
+        RedisCacheManager.RedisCacheManagerBuilder builder = RedisCacheManager.RedisCacheManagerBuilder.fromConnectionFactory(redisConnectionFactory());
+
+        RedisCacheConfiguration redisCacheConfiguration =
                 RedisCacheConfiguration.defaultCacheConfig()
                         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
                         .entryTtl(Duration.ofSeconds(redisTtlSecond));
-
-        builder.cacheDefaults(defaultConfig);
+        builder.cacheDefaults(redisCacheConfiguration);
 
         return new LoggingCacheManager(builder.build(), "Global-Redis-Cache");
+
+//----
+
+//        RedisCacheManager.RedisCacheManagerBuilder builder = RedisCacheManager.RedisCacheManagerBuilder.fromConnectionFactory(jedisConnectionFactory());
+//
+//        RedisCacheConfiguration defaultConfig =
+//                RedisCacheConfiguration.defaultCacheConfig()
+//                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+//                        .entryTtl(Duration.ofSeconds(redisTtlSecond));
+//
+//        builder.cacheDefaults(defaultConfig);
+//
+//        return new LoggingCacheManager(builder.build(), "Global-Redis-Cache");
     }
 
     @Bean
