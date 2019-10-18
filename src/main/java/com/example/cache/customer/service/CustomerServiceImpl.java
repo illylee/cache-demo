@@ -30,12 +30,12 @@ public class CustomerServiceImpl implements CustomerService {
     //value: 캐시명
     //key: 같은 캐시명을 사용할 때, 구분되는 구분 값. KeyGenerator와 같이 쓸 수 없음.
     //keyGenerator: 특정 로직에 의해 cache key를 만든고자 하는 경우. 4.0 이후 버전부터는 SimpleKeyGenerator 사용.
-    //cacheManaager: 사용할 cacheManager 지정.
+    //cacheManaager: 사용할 cacheManager 지정.   ( cacheManager = "caffeineCacheManager" 라고 하면 카페인캐시만 사용)
     //cacheResolver: cache key에 대한 결과값을 돌려주는 Resolver (interceptor역할)
     //condition: SpEL 표현식을 통해 특정 조건에 부합하는 경우에만 캐시 사용. 연산조건이 true인 경우에만 캐싱
     //unless: 캐싱이 이루어지지않는 조건을 설정. 연산조건이 true이면 캐싱되지 않는다. ex) id가 널이 아닌경우에만 캐싱. (unless="#id == null")
     //sync: 캐시 구현체가 Thread safe 하지 않는 경우, 자체적으로 캐시에 동기화를 거는 속성.
-    @Cacheable(key = "'customer_id_' + #customerId", value = "customerIdCache")
+    @Cacheable(key = "'customer_id_' + #customerId", value = "customerIdCache" )
     public Customer selectCustomer(Long customerId) {
         return customerMapper.selectCustomer(customerId);
     }
@@ -51,6 +51,11 @@ public class CustomerServiceImpl implements CustomerService {
     @CacheEvict(key="'customer_id_' + #customerId", value = "customerIdCache")
     public void updateCustomer(Long customerId, String info) {
          customerMapper.updateCustomer(customerId, info);
+    }
+
+    @CacheEvict(key="#key", cacheNames = "customerIdCache" )
+    public void evict(String key) {
+        log.info("evict!");
     }
 
 }

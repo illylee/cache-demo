@@ -33,6 +33,11 @@ public class CustomerController {
         customerService.updateCustomer(customerId, info);
     }
 
+    @RequestMapping(value = "/evict", method = RequestMethod.GET)
+    public void evictTest(@RequestParam String key) {
+        customerService.evict(key);
+    }
+
 
 
 }

@@ -2,8 +2,11 @@ package com.example.cache.config;
 
 import com.example.cache.config.chaincache.ChainedCacheManager;
 import com.example.cache.config.logcache.LoggingCacheManager;
+import com.example.cache.config.redis.RedisService;
+import com.example.cache.customer.domain.Customer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.cache.Cache;
@@ -16,11 +19,20 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisSentinelConfiguration;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import javax.inject.Inject;
 import java.time.Duration;
@@ -40,6 +52,7 @@ public class CacheConfig extends CachingConfigurerSupport {
     @Inject
     private RedisProperties redisProperties;
 
+
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
         //sentinel 구성
@@ -54,11 +67,34 @@ public class CacheConfig extends CachingConfigurerSupport {
         return new LettuceConnectionFactory(sentinelConfig);
     }
 
+    @Bean
+    MessageListenerAdapter messageListenerAdapter() {
+        return new MessageListenerAdapter(new RedisService());
+    }
 
-//    @Bean
-//    public JedisConnectionFactory jedisConnectionFactory() {
-//        return new JedisConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
-//    }
+
+    @Bean
+    RedisMessageListenerContainer redisContainer() {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(redisConnectionFactory());
+        container.addMessageListener(messageListenerAdapter(), topic());
+        return container;
+    }
+
+    @Bean
+    RedisMessageListenerContainer keyExpirationListenerContainer(ExpirationListener expirationListener) {
+        RedisMessageListenerContainer listenerContainer = new RedisMessageListenerContainer();
+        listenerContainer.setConnectionFactory(redisConnectionFactory());
+        listenerContainer.addMessageListener(expirationListener, new PatternTopic("__keyevent@*__:expired"));
+        listenerContainer.setErrorHandler(e -> log.error("There was an error in redis key expiration listener container", e));
+        return listenerContainer;
+    }
+
+    @Bean
+    ChannelTopic topic() {
+        return new ChannelTopic("customerIdCache");
+    }
+
 
     @Bean
     public CacheManager redisCacheManager() {
@@ -73,23 +109,10 @@ public class CacheConfig extends CachingConfigurerSupport {
 
         return new LoggingCacheManager(builder.build(), "Global-Redis-Cache");
 
-//----
-
-//        RedisCacheManager.RedisCacheManagerBuilder builder = RedisCacheManager.RedisCacheManagerBuilder.fromConnectionFactory(jedisConnectionFactory());
-//
-//        RedisCacheConfiguration defaultConfig =
-//                RedisCacheConfiguration.defaultCacheConfig()
-//                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
-//                        .entryTtl(Duration.ofSeconds(redisTtlSecond));
-//
-//        builder.cacheDefaults(defaultConfig);
-//
-//        return new LoggingCacheManager(builder.build(), "Global-Redis-Cache");
     }
 
     @Bean
     public CacheManager caffeineCacheManager() {
-        log.info("##caffeineCacheManager");
         SimpleCacheManager caffeineCacheManager = new SimpleCacheManager();
         List<Cache> caches = Arrays.stream(CacheType.values())
                 .map(cache -> new CaffeineCache(cache.getName(), Caffeine.newBuilder().recordStats()
